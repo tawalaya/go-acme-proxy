@@ -3,8 +3,8 @@ Tiny Let's Encrypt enabled reverse proxy
 
 ## Usage
 
-To run the proxy just run go-acme-proxy --port 8080 to add https to the service running on localhost 8080.
-
+To run the proxy just run `go-acme-proxy --port 8080` to add https to the service running at http://localhost:8080.
+Use `--author` to add the mail used to register this service on let's encrypt.
 
 ## Getting Started
 
