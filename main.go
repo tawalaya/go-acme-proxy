@@ -36,7 +36,7 @@ var log = logrus.NewEntry(logger)
 func cliSetup() {
 	viper.SetDefault("port", 8000)
 	viper.SetDefault("author", "admin@localhost")
-
+	viper.SetDefault("self", true)
 	flag.Int("port", 8000, "set the port to listen to")
 	flag.String("author", "admin@localhost", "the mail used by acme to register this service")
 	flag.String("domain", "localhost", "the domain to use for acme")
@@ -75,8 +75,8 @@ func (p *SSLProxy) setupServer() {
 	p.address, err = url.Parse(fmt.Sprintf("http://localhost:%d", p.port))
 
 	if viper.GetBool("self") {
-		cert := filepath.Join(".certs", "cert.pem")
-		key := filepath.Join(".certs", "key.pem")
+		cert := filepath.Join(".", "cert.pem")
+		key := filepath.Join(".", "key.pem")
 
 		err := httpscerts.Check(cert, key)
 		if err != nil {
@@ -90,19 +90,18 @@ func (p *SSLProxy) setupServer() {
 			Addr:    ":443",
 			Handler: http.HandlerFunc(p.serve),
 		}
-		go func() {
 
-			err := httpsServer.ListenAndServeTLS(cert, key)
-			if err != nil {
-				log.Errorf("httpsSrv.ListendAndServeTLS() failed with %s", err)
-			}
-		}()
+		err = httpsServer.ListenAndServeTLS(cert, key)
+		if err != nil {
+			log.Errorf("httpsSrv.ListendAndServeTLS() failed with %s", err)
+		}
+
 	} else {
 		m := &autocert.Manager{
 			Email:      viper.GetString("author"),
 			Prompt:     autocert.AcceptTOS,
 			HostPolicy: autocert.HostWhitelist(viper.GetStringSlice("domains")...),
-			Cache:      autocert.DirCache(".certs"),
+			Cache:      autocert.DirCache("."),
 		}
 
 		httpsServer := &http.Server{
