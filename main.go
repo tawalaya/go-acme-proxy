@@ -37,11 +37,13 @@ func cliSetup() {
 	viper.SetDefault("port", 8000)
 	viper.SetDefault("author", "admin@localhost")
 	viper.SetDefault("self", true)
+	viper.SetDefault("certs", ".")
+
 	flag.Int("port", 8000, "set the port to listen to")
 	flag.String("author", "admin@localhost", "the mail used by acme to register this service")
 	flag.String("domain", "localhost", "the domain to use for acme")
 	flag.Bool("self", false, "use self signed instead")
-
+	flag.String("certs", ".", "location of the certificates")
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
 	viper.BindPFlags(pflag.CommandLine)
@@ -75,8 +77,8 @@ func (p *SSLProxy) setupServer() {
 	p.address, err = url.Parse(fmt.Sprintf("http://localhost:%d", p.port))
 
 	if viper.GetBool("self") {
-		cert := filepath.Join(".", "cert.pem")
-		key := filepath.Join(".", "key.pem")
+		cert := filepath.Join(viper.GetString("certs"), "cert.pem")
+		key := filepath.Join(viper.GetString("certs"), "key.pem")
 
 		err := httpscerts.Check(cert, key)
 		if err != nil {
