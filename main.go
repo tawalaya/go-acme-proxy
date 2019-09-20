@@ -36,7 +36,7 @@ var log = logrus.NewEntry(logger)
 func cliSetup() {
 	viper.SetDefault("port", 8000)
 	viper.SetDefault("author", "admin@localhost")
-	viper.SetDefault("self", true)
+	viper.SetDefault("self", false)
 	viper.SetDefault("certs", ".")
 
 	flag.Int("port", 8000, "set the port to listen to")
@@ -77,6 +77,7 @@ func (p *SSLProxy) setupServer() {
 	p.address, err = url.Parse(fmt.Sprintf("http://localhost:%d", p.port))
 
 	if viper.GetBool("self") {
+		log.Info("Using Self Signed")
 		cert := filepath.Join(viper.GetString("certs"), "cert.pem")
 		key := filepath.Join(viper.GetString("certs"), "key.pem")
 
@@ -99,10 +100,11 @@ func (p *SSLProxy) setupServer() {
 		}
 
 	} else {
+		log.Infof("Using autocert for %+v", viper.GetStringSlice("domain"))
 		m := &autocert.Manager{
 			Email:      viper.GetString("author"),
 			Prompt:     autocert.AcceptTOS,
-			HostPolicy: autocert.HostWhitelist(viper.GetStringSlice("domains")...),
+			HostPolicy: autocert.HostWhitelist(viper.GetStringSlice("domain")...),
 			Cache:      autocert.DirCache("."),
 		}
 
@@ -111,6 +113,12 @@ func (p *SSLProxy) setupServer() {
 			Handler:   http.HandlerFunc(p.serve),
 			TLSConfig: &tls.Config{GetCertificate: m.GetCertificate},
 		}
+
+		go func() {
+			// serve HTTP, which will redirect automatically to HTTPS
+			h := m.HTTPHandler(nil)
+			log.Fatal(http.ListenAndServe(":http", h))
+		}()
 
 		err = httpsServer.ListenAndServeTLS("", "")
 		if err != nil {
